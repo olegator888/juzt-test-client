@@ -60,7 +60,7 @@ const Filters = ({ colors, brands }: Props) => {
     );
 
     setLoading(false);
-  }, []);
+  }, [params]);
 
   const sortByDefault = paramsParsed.sortBy;
   const sortMethodDefault = paramsParsed.sortMethod;
