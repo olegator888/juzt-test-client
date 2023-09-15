@@ -31,7 +31,7 @@ const CarsList = ({ carsInitial, hasMoreInitial }: Props) => {
 
   const onScrollEnd = async () => {
     // checks to reduce amount of rerenders
-    if (hasMore && status !== "fetching") {
+    if (hasMore && status !== "fetching" && status !== "loading") {
       dispatch(fetchNextPage(paramsParsed));
     }
   };
