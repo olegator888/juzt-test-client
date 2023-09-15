@@ -8,9 +8,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Color } from "@/types/data";
+import { Loader } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import qs, { ParsedQuery } from "query-string";
-import { ChangeEvent, useCallback } from "react";
+import { ChangeEvent, useCallback, useEffect, useState } from "react";
 
 interface Props {
   colors: Color[];
@@ -31,8 +32,35 @@ const Filters = ({ colors, brands }: Props) => {
 
   const paramsParsed = qs.parse(params.toString());
 
-  let brandQuery = paramsParsed.brand;
-  let colorQuery = paramsParsed.color;
+  const [loading, setLoading] = useState(true);
+
+  const [brandsState, setBrandsState] = useState<
+    { brand: string; selected: boolean }[]
+  >([]);
+  const [colorsState, setColorsState] = useState<
+    { color: Color; selected: boolean }[]
+  >([]);
+
+  useEffect(() => {
+    let brandQuery = paramsParsed.brand;
+    let colorQuery = paramsParsed.color;
+
+    setBrandsState(
+      brands.map((brand) => ({
+        brand,
+        selected: getBrandChecked(brand, brandQuery),
+      }))
+    );
+
+    setColorsState(
+      colors.map((color) => ({
+        color,
+        selected: getColorChecked(color.colorUrl, colorQuery),
+      }))
+    );
+
+    setLoading(false);
+  }, []);
 
   const sortByDefault = paramsParsed.sortBy;
   const sortMethodDefault = paramsParsed.sortMethod;
@@ -51,13 +79,13 @@ const Filters = ({ colors, brands }: Props) => {
 
     const url = qs.stringifyUrl(
       {
-        url: "/",
+        url: "",
         query: updatedQuery,
       },
       { skipNull: true }
     );
 
-    router.push(url);
+    router.push(url, { scroll: false });
   };
 
   const onFilterSelectChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -65,6 +93,24 @@ const Filters = ({ colors, brands }: Props) => {
 
     let currentQuery: ParsedQuery<string> = {};
     let values: string[] = [];
+
+    if (name === "brand") {
+      setBrandsState((prev) =>
+        prev.map((item) =>
+          item.brand === value ? { ...item, selected: !item.selected } : item
+        )
+      );
+    }
+
+    if (name === "color") {
+      setColorsState((prev) =>
+        prev.map((item) =>
+          item.color.colorUrl === value
+            ? { ...item, selected: !item.selected }
+            : item
+        )
+      );
+    }
 
     if (params) {
       currentQuery = qs.parse(params.toString());
@@ -99,11 +145,11 @@ const Filters = ({ colors, brands }: Props) => {
       { skipNull: true }
     );
 
-    router.push(url);
+    router.push(url, { scroll: false });
   };
 
   const getBrandChecked = useCallback(
-    (brand: string) => {
+    (brand: string, brandQuery?: string | (string | null)[] | null) => {
       if (!brandQuery) {
         return false;
       }
@@ -118,7 +164,7 @@ const Filters = ({ colors, brands }: Props) => {
   );
 
   const getColorChecked = useCallback(
-    (color: string) => {
+    (color: string, colorQuery?: string | (string | null)[] | null) => {
       if (!colorQuery) {
         return false;
       }
@@ -131,6 +177,64 @@ const Filters = ({ colors, brands }: Props) => {
     },
     [params]
   );
+
+  let content = (
+    <div>
+      <h2 className="mb-1 text-lg font-semibold">Фильтрация</h2>
+      <div className="flex flex-col gap-4">
+        <div>
+          <p className="text-md mb-2">Бренд</p>
+          <div className="flex flex-col gap-1">
+            {brandsState.map((brand) => (
+              <label
+                key={brand.brand}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <input
+                  className="w-3 h-3"
+                  type="checkbox"
+                  name="brand"
+                  checked={brand.selected}
+                  value={brand.brand}
+                  onChange={onFilterSelectChange}
+                />
+                <span className="text-sm">{brand.brand}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div>
+          <p className="text-md mb-2">Цвет</p>
+          <div className="flex flex-col gap-1">
+            {colorsState.map((colorItem) => (
+              <label
+                key={colorItem.color.colorUrl}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <input
+                  className="w-3 h-3"
+                  type="checkbox"
+                  name="color"
+                  checked={colorItem.selected}
+                  value={colorItem.color.colorUrl}
+                  onChange={onFilterSelectChange}
+                />
+                <span className="text-sm">{colorItem.color.color}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (loading) {
+    content = (
+      <div className="flex justify-center">
+        <Loader className="animate-spin text-blue-400 w-10 h-10" />
+      </div>
+    );
+  }
 
   return (
     <div className="border rounded-lg p-4 flex flex-col mb-4 gap-4 h-fit sticky top-[40px]">
@@ -165,53 +269,7 @@ const Filters = ({ colors, brands }: Props) => {
           </Select>
         </div>
       </div>
-      <div>
-        <h2 className="mb-1 text-lg font-semibold">Фильтрация</h2>
-        <div className="flex flex-col gap-4">
-          <div>
-            <p className="text-md mb-2">Бренд</p>
-            <div className="flex flex-col gap-1">
-              {brands.map((brand) => (
-                <label
-                  key={brand}
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <input
-                    className="w-3 h-3"
-                    type="checkbox"
-                    name="brand"
-                    checked={getBrandChecked(brand)}
-                    value={brand}
-                    onChange={onFilterSelectChange}
-                  />
-                  <span className="text-sm">{brand}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-md mb-2">Цвет</p>
-            <div className="flex flex-col gap-1">
-              {colors.map((colorItem) => (
-                <label
-                  key={colorItem.colorUrl}
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <input
-                    className="w-3 h-3"
-                    type="checkbox"
-                    name="color"
-                    checked={getColorChecked(colorItem.colorUrl)}
-                    value={colorItem.colorUrl}
-                    onChange={onFilterSelectChange}
-                  />
-                  <span className="text-sm">{colorItem.color}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      {content}
     </div>
   );
 };
