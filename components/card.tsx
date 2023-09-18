@@ -10,7 +10,10 @@ interface Props {
 
 const Card = ({ car }: Props) => {
   return (
-    <Link href={`/cars/${car.id}`} className="h-[300px] flex flex-col rounded-xl cursor-pointer transition group shadow-xl border-transparent hover:border-zinc-200 border-2 p-2 relative">
+    <Link
+      href={`/cars/${car._id}`}
+      className="h-[300px] flex flex-col rounded-xl cursor-pointer transition group shadow-xl border-transparent hover:border-zinc-200 border-2 p-2 relative"
+    >
       <div className="h-[220px] w-full relative overflow-hidden rounded-lg">
         <Image
           src={car.imageUrl}
