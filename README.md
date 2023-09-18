@@ -11,7 +11,7 @@
     NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
     NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
     
-    NEXT_PUBLIC_API_URL=https://juzt-test-server-8rho.vercel.app
+    NEXT_PUBLIC_API_URL=https://juzt-test-server.vercel.app
 ```
 Это переменные окружения для авторизации и для сервера
 
