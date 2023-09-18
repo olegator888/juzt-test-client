@@ -70,9 +70,28 @@ const Filters = ({ colors, brands, isOpen, close }: Props) => {
   }, [isOpen]);
 
   const handleSortSelectChange = (value: string, type: string) => {
+    let sortMethod = filtersState.sortMethod;
+    let sortBy = filtersState.sortBy;
+
+    switch (type) {
+      case "sortBy":
+        if (!sortMethod) {
+          sortMethod = "asc";
+        }
+        sortBy = value;
+        break;
+      case "sortMethod":
+        if (!sortBy) {
+          sortBy = "price";
+        }
+        sortMethod = value;
+        break;
+    }
+
     setFiltersState((prev) => ({
       ...prev,
-      [type]: value,
+      sortBy,
+      sortMethod,
     }));
   };
 
@@ -113,13 +132,17 @@ const Filters = ({ colors, brands, isOpen, close }: Props) => {
       color: colors.length ? colors.map((item) => item.color.colorUrl) : null,
     };
 
-    const url = qs.stringifyUrl(
+    let url = qs.stringifyUrl(
       {
         url: "",
         query,
       },
-      { skipNull: true, skipEmptyString: true }
+      { skipNull: true }
     );
+
+    if (!query.sortMethod && !query.sortBy && !query.brand && !query.color) {
+      url = "/";
+    }
 
     close();
     router.push(url);
