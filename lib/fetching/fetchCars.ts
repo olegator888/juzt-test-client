@@ -10,7 +10,7 @@ interface Props {
 export default async function fetchCars({ page = 1, query = {} }: Props) {
   try {
     const { data } = await axios.get<ServerResponse>(
-      `${process.env.NEXT_PUBLIC_API_URL}/cars`,
+      `https://juzt-test-server.vercel.app/cars`,
       {
         params: {
           ...query,

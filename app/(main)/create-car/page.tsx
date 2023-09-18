@@ -75,7 +75,7 @@ const CreateCarPage = () => {
         powerReserve,
       };
 
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/cars`, data);
+      await axios.post(`https://juzt-test-server.vercel.app/cars`, data);
 
       setForm(defaultForm);
     } catch (e) {
