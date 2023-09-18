@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -8,7 +10,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Color } from "@/types/data";
-import { Loader } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import qs, { ParsedQuery } from "query-string";
 import { ChangeEvent, useCallback, useEffect, useState } from "react";
@@ -16,6 +17,8 @@ import { ChangeEvent, useCallback, useEffect, useState } from "react";
 interface Props {
   colors: Color[];
   brands: string[];
+  isOpen: boolean;
+  close: () => void;
 }
 
 /**
@@ -26,126 +29,100 @@ interface Props {
  * 3. we can save the link and go back to it later
  */
 
-const Filters = ({ colors, brands }: Props) => {
+interface FiltersState {
+  brands: { brand: string; selected: boolean }[];
+  colors: { color: Color; selected: boolean }[];
+  sortBy: string | null;
+  sortMethod: string | null;
+}
+
+const Filters = ({ colors, brands, isOpen, close }: Props) => {
   const router = useRouter();
   const params = useSearchParams();
 
   const paramsParsed = qs.parse(params.toString());
 
-  const [loading, setLoading] = useState(true);
-
-  const [brandsState, setBrandsState] = useState<
-    { brand: string; selected: boolean }[]
-  >([]);
-  const [colorsState, setColorsState] = useState<
-    { color: Color; selected: boolean }[]
-  >([]);
+  const [filtersState, setFiltersState] = useState<FiltersState>({
+    brands: [],
+    colors: [],
+    sortBy: null,
+    sortMethod: null,
+  });
 
   useEffect(() => {
-    let brandQuery = paramsParsed.brand;
-    let colorQuery = paramsParsed.color;
+    const brandQuery = paramsParsed.brand;
+    const colorQuery = paramsParsed.color;
+    const sortByDefault = paramsParsed.sortBy as string | null;
+    const sortMethodDefault = paramsParsed.sortMethod as string | null;
 
-    setBrandsState(
-      brands.map((brand) => ({
+    setFiltersState({
+      brands: brands.map((brand) => ({
         brand,
         selected: getBrandChecked(brand, brandQuery),
-      }))
-    );
-
-    setColorsState(
-      colors.map((color) => ({
+      })),
+      colors: colors.map((color) => ({
         color,
         selected: getColorChecked(color.colorUrl, colorQuery),
-      }))
-    );
-
-    setLoading(false);
-  }, [params]);
-
-  const sortByDefault = paramsParsed.sortBy;
-  const sortMethodDefault = paramsParsed.sortMethod;
+      })),
+      sortBy: sortByDefault || null,
+      sortMethod: sortMethodDefault || null,
+    });
+  }, [isOpen]);
 
   const handleSortSelectChange = (value: string, type: string) => {
-    let currentQuery = {};
-
-    if (params) {
-      currentQuery = qs.parse(params.toString());
-    }
-
-    const updatedQuery = {
-      ...currentQuery,
+    setFiltersState((prev) => ({
+      ...prev,
       [type]: value,
+    }));
+  };
+
+  const onBrandClick = (e: ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+
+    setFiltersState((prev) => ({
+      ...prev,
+      brands: prev.brands.map((item) =>
+        item.brand === value ? { ...item, selected: !item.selected } : item
+      ),
+    }));
+  };
+
+  const onColorClick = (e: ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+
+    setFiltersState((prev) => ({
+      ...prev,
+      colors: prev.colors.map((colorItem) =>
+        colorItem.color.colorUrl === value
+          ? { ...colorItem, selected: !colorItem.selected }
+          : colorItem
+      ),
+    }));
+  };
+
+  const onSubmit = () => {
+    const { sortMethod, sortBy } = filtersState;
+
+    const brands = filtersState.brands.filter((brand) => brand.selected);
+    const colors = filtersState.colors.filter((color) => color.selected);
+
+    const query: ParsedQuery<string> = {
+      sortMethod,
+      sortBy,
+      brand: brands.length ? brands.map((item) => item.brand) : null,
+      color: colors.length ? colors.map((item) => item.color.colorUrl) : null,
     };
 
     const url = qs.stringifyUrl(
       {
         url: "",
-        query: updatedQuery,
+        query,
       },
-      { skipNull: true }
+      { skipNull: true, skipEmptyString: true }
     );
 
-    router.push(url, { scroll: false });
-  };
-
-  const onFilterSelectChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value, checked } = e.target;
-
-    let currentQuery: ParsedQuery<string> = {};
-    let values: string[] = [];
-
-    if (name === "brand") {
-      setBrandsState((prev) =>
-        prev.map((item) =>
-          item.brand === value ? { ...item, selected: !item.selected } : item
-        )
-      );
-    }
-
-    if (name === "color") {
-      setColorsState((prev) =>
-        prev.map((item) =>
-          item.color.colorUrl === value
-            ? { ...item, selected: !item.selected }
-            : item
-        )
-      );
-    }
-
-    if (params) {
-      currentQuery = qs.parse(params.toString());
-
-      if (checked) {
-        values = Array.isArray(currentQuery[name])
-          ? (currentQuery[name] as string[])
-          : [currentQuery[name] as string];
-      } else {
-        values = Array.isArray(currentQuery[name])
-          ? (currentQuery[name] as string[]).filter(
-              (curValue) => curValue !== value
-            )
-          : [];
-      }
-    }
-
-    if (checked) {
-      values.push(value);
-    }
-
-    const updatedQuery = {
-      ...currentQuery,
-      [name]: Array.from(new Set(values)),
-    };
-
-    const url = qs.stringifyUrl(
-      {
-        url: "/",
-        query: updatedQuery,
-      },
-      { skipNull: true }
-    );
-
-    router.push(url, { scroll: false });
+    close();
+    router.push(url);
   };
 
   const getBrandChecked = useCallback(
@@ -178,6 +155,10 @@ const Filters = ({ colors, brands }: Props) => {
     [params]
   );
 
+  const handleClose = () => {
+    close();
+  };
+
   let content = (
     <div>
       <h2 className="mb-1 text-lg font-semibold">Фильтрация</h2>
@@ -185,7 +166,7 @@ const Filters = ({ colors, brands }: Props) => {
         <div>
           <p className="text-md mb-2">Бренд</p>
           <div className="flex flex-col gap-1">
-            {brandsState.map((brand) => (
+            {filtersState.brands.map((brand) => (
               <label
                 key={brand.brand}
                 className="flex items-center gap-2 cursor-pointer"
@@ -193,10 +174,10 @@ const Filters = ({ colors, brands }: Props) => {
                 <input
                   className="w-3 h-3"
                   type="checkbox"
-                  name="brand"
+                  name="brands"
                   checked={brand.selected}
                   value={brand.brand}
-                  onChange={onFilterSelectChange}
+                  onChange={onBrandClick}
                 />
                 <span className="text-sm">{brand.brand}</span>
               </label>
@@ -206,7 +187,7 @@ const Filters = ({ colors, brands }: Props) => {
         <div>
           <p className="text-md mb-2">Цвет</p>
           <div className="flex flex-col gap-1">
-            {colorsState.map((colorItem) => (
+            {filtersState.colors.map((colorItem) => (
               <label
                 key={colorItem.color.colorUrl}
                 className="flex items-center gap-2 cursor-pointer"
@@ -214,63 +195,64 @@ const Filters = ({ colors, brands }: Props) => {
                 <input
                   className="w-3 h-3"
                   type="checkbox"
-                  name="color"
+                  name="colors"
                   checked={colorItem.selected}
                   value={colorItem.color.colorUrl}
-                  onChange={onFilterSelectChange}
+                  onChange={onColorClick}
                 />
                 <span className="text-sm">{colorItem.color.color}</span>
               </label>
             ))}
           </div>
         </div>
+        <Button className="mt-2" onClick={onSubmit}>
+          Применить
+        </Button>
       </div>
     </div>
   );
 
-  if (loading) {
-    content = (
-      <div className="flex justify-center">
-        <Loader className="animate-spin text-blue-400 w-10 h-10" />
-      </div>
-    );
-  }
-
   return (
-    <div className="border rounded-lg p-4 flex flex-col mb-4 gap-4 h-fit sticky top-[40px]">
-      <div>
-        <h2 className="mb-2 pl-1 text-lg font-semibold">Сортировка</h2>
-        <div className="flex flex-col gap-2">
-          <Select
-            onValueChange={(value) => handleSortSelectChange(value, "sortBy")}
-            defaultValue={sortByDefault as string}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Сортировать по" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="price">Цене</SelectItem>
-              <SelectItem value="year">Году выпуска</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            onValueChange={(value) =>
-              handleSortSelectChange(value, "sortMethod")
-            }
-            defaultValue={sortMethodDefault as string}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Способ сортировки" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="asc">По возрастанию</SelectItem>
-              <SelectItem value="desc">По убыванию</SelectItem>
-            </SelectContent>
-          </Select>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent>
+        <div className="rounded-lg flex flex-col gap-4 h-fit sticky top-[40px]">
+          <div>
+            <h2 className="mb-2 pl-1 text-lg font-semibold">Сортировка</h2>
+            <div className="flex gap-2">
+              <Select
+                value={filtersState.sortBy || undefined}
+                onValueChange={(value) =>
+                  handleSortSelectChange(value, "sortBy")
+                }
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Сортировать по" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="price">Цене</SelectItem>
+                  <SelectItem value="year">Году выпуска</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={filtersState.sortMethod || undefined}
+                onValueChange={(value) =>
+                  handleSortSelectChange(value, "sortMethod")
+                }
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Способ сортировки" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">По возрастанию</SelectItem>
+                  <SelectItem value="desc">По убыванию</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {content}
         </div>
-      </div>
-      {content}
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

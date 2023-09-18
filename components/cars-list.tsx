@@ -60,7 +60,6 @@ const CarsList = ({ carsInitial, hasMoreInitial }: Props) => {
      */
     return () => {
       dispatch(setCars([]));
-      dispatch(setHasMore(true));
       dispatch(setPage(1));
     };
   }, []);
@@ -99,7 +98,7 @@ const CarsList = ({ carsInitial, hasMoreInitial }: Props) => {
       {carsToRender.length > 0 ? (
         <div className="w-full grid gap-4 lg:grid-cols-3 sm:grid-cols-2">
           {carsToRender.map((car) => (
-            <Card key={car.id} car={car} />
+            <Card key={car._id} car={car} />
           ))}
         </div>
       ) : (

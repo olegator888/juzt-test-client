@@ -2,7 +2,7 @@ export type EngineType = "gasoline" | "diesel" | "electric";
 export type TransmissionType = "manual" | "auto" | "robotic";
 
 export interface CarBase {
-  id: string;
+  _id: string;
   imageUrl: string;
   brand: string;
   model: string;
